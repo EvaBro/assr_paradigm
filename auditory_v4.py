@@ -10,7 +10,9 @@ import sounddevice as sd
 from psychopy import core, parallel, event, visual
 from enum import IntFlag
 from utils import stim
-
+import sys
+sys.path.append(r'C:\Experiments\TaylorLab\python_utils') 
+import OptitrackUtils as opti
 import os
 os.chdir(os.path.dirname(os.path.abspath(__file__))) 
 
@@ -122,6 +124,11 @@ def generate_square_wave(frequency, square_duration, play_duration, sample_rate)
 tone_data = generate_square_wave(frequency, square_duration, play_duration, sample_rate)
 tone_data = tone_data.astype(np.float32)
 
+#%% Setup optitrack
+client = opti.setup()
+opti.start_recording(client)
+opti.set_take_name(client, 'ASSR')
+
 #%% Loop
 
 # Draw intro screen
@@ -138,6 +145,7 @@ while video_start_timer.getTime() > 0:
     window.flip()
     if 'escape' in event.getKeys():
         print('Experiment aborted by user during sound.')
+        opti.stop_recording(client)
         sd.stop()
         window.close()
         core.quit()
@@ -166,6 +174,7 @@ for trial in range(n_trials):
         if 'escape' in event.getKeys():
             print('Experiment aborted by user during sound.')
             sd.stop()
+            opti.stop_recording(client)
             window.close()
             core.quit()
     
@@ -182,6 +191,7 @@ for trial in range(n_trials):
         if 'escape' in event.getKeys():
             print('Experiment aborted by user during pause.')
             sd.stop()
+            opti.stop_recording(client)
             window.close()
             core.quit()
 
@@ -191,5 +201,6 @@ core.wait(end_dur)
 
 # End of experiment
 print("Experiment complete.")
+opti.stop_recording(client)
 window.close()
 core.quit()
