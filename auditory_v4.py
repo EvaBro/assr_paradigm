@@ -126,8 +126,8 @@ tone_data = tone_data.astype(np.float32)
 
 #%% Setup optitrack
 client = opti.setup()
-opti.start_recording(client)
 opti.set_take_name(client, 'ASSR')
+opti.start_recording(client)
 
 #%% Loop
 
