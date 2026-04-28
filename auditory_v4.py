@@ -3,18 +3,66 @@
 Created on Wed Jun 25 17:03:18 2025
 
 @author: Julian Bandhan, Eva Broeders
+
+ASSR paradigm.
+A pingu cartoon is played while the participant listens to an auditory clicktrain.
+
+Before you start, verify what sound drivers you have available:
+    import sounddevice as sd
+    sd.query_devices()
+    --> this will print the list of available sound drivers.
+    
+On windows, use a WASAPI driver instead of the default driver for better 
+timing (lower latency between sending signal to the buffer and actual playback).
+Make a note of the index of the driver of your choice, and use it to set device_index.
+
+The script will print the estimated output latency. 
+
 """
 
 import numpy as np
 import sounddevice as sd
-from psychopy import core, parallel, event, visual
+from psychopy import core, event, visual
 from enum import IntFlag
-from utils import stim
 import sys
 sys.path.append(r'C:\Experiments\TaylorLab\stim_utils') 
 import OptitrackUtils as opti
+import ExperimentUtils as utils
 import os
 os.chdir(os.path.dirname(os.path.abspath(__file__))) 
+
+#%% System-dependent parameters
+
+selected_video = 'Pingu_Scooter.mp4' # Make sure the video is in the current folder or specify a file path as needed
+
+# Select audio device
+device_index = 7  # Set WASAPI as default driver for low latency. In our setuip, 7 is for MSR speaker and 10 for earphones. 
+sd.default.device = device_index
+device_info = sd.query_devices(sd.default.device, 'output')
+
+print(f"Using device: {sd.query_devices(sd.default.device)['name']}")
+print(f"Default Sample Rate: {device_info['default_samplerate']} Hz")
+
+# Optimized audio settings
+sample_rate = 48000  # Only supported samplerate for WASAPI
+blocksize = 512  # length of audio buffer
+latency_mode = 'low'
+
+# For WASAPI, enable exclusive mode - not sure if this works for other drivers
+extra_settings = sd.WasapiSettings(exclusive=True)
+
+# Screen on which video is displayed
+screen_idx=0 
+
+framerate = 60 # Hz, system-dependent. Only used for fade at the end
+
+# Trigger codes
+class PortCodes(IntFlag):
+    reset = 0       # Reset all ports
+    tonetrig = 8    # Trigger for the tone
+    
+# Whether or not to use head motion tracking, set to False if you don't have Optitrack
+optitrack = False
 
 #%% Experiment parameters
 
@@ -28,27 +76,10 @@ pause_duration = 1.75    # in seconds
 max_jitter = 0.25        # in seconds
 n_trials = 80
 frequency = 40           # Hz, number of clicks per second
+fade_duration = 2  # seconds, the duration of fade-out after experiment_duration is exceeded. 
 
-selected_video = 'Pingu_Scooter.mp4'#'pingu_season1_trim.mp4'
+#%% Audio setup
 
-#%% Audio setings
-
-# Select audio device
-device_index = 7  # Set WASAPI as default driver for low latency. 7 for MSR speaker and 10 for earphones
-sd.default.device = device_index
-device_info = sd.query_devices(sd.default.device, 'output')
-
-print(f"Using device: {sd.query_devices(sd.default.device)['name']}")
-print(f"Default Sample Rate: {device_info['default_samplerate']} Hz")
-
-# Optimized audio settings
-sample_rate = 48000  # Only supported samplerate for WASAPI
-blocksize = 512  # length of audio buffer
-latency_mode = 'low'
-
-# For WASAPI, enable exclusive mode 
-extra_settings = sd.WasapiSettings(exclusive=True)
-    
 # Open an optimized output stream to check latency
 with sd.OutputStream(
     device=device_index, samplerate=sample_rate,
@@ -57,43 +88,22 @@ with sd.OutputStream(
 ) as stream:
     print(f"Reported output latency: {stream.latency:.6f} seconds")
     
-# Generate jitters
+#%% Generate jitters
 jitters = np.random.uniform(-max_jitter, max_jitter, n_trials)
 pause_durations = pause_duration + jitters
-    
-#%% Trigger Settings
-trigger_port_address = 0xcFF8  # Address for parallel port (modify as needed)
-
-# Initialize parallel port for triggers
-trig_port = parallel.ParallelPort(trigger_port_address)
-
-# Trigger codes
-class PortCodes(IntFlag):
-    reset = 0       # Reset all ports
-    tonetrig = 8    # Trigger for the tone
-    
+        
 
 #%% Video Settings
 
-# Screen on which video is displayed
-screen_idx=0 # Should be 0 for stim PC
-
 # Create a window
-win_size = stim.get_window_size(screen_idx)
-window = stim.create_window(win_size, screen_idx)
-
-# Use this instead of previous line if you want pingu to play on the left screen
-# So another video can be played simultaneously on the right
-# Without a psychopy window, this script will not work
-# window = visual.Window(size = (800, 600), screen = 1, fullscr = False) 
+win_size = utils.get_window_size(screen_idx) 
+window = utils.create_window(win_size, screen_idx)
 
 # Create screens
-intro_screen = stim.create_staystill_screen(window)
-end_screen = stim.create_end_screen(window)
+intro_screen = utils.create_staystill_screen(window)
 
 video = visual.MovieStim(win=window, name='', autoStart=False, size=win_size, noAudio=True)
 video.loadMovie(selected_video) 
-
 
 #%% Tone generation
 
@@ -118,16 +128,17 @@ def generate_square_wave(frequency, square_duration, play_duration, sample_rate)
 
     return waveform
 
-
-
 # Generate the square wave
 tone_data = generate_square_wave(frequency, square_duration, play_duration, sample_rate)
 tone_data = tone_data.astype(np.float32)
 
 #%% Setup optitrack
-client = opti.setup()
-opti.set_take_name(client, 'ASSR')
-opti.start_recording(client)
+if optitrack:
+    client = opti.setup()
+    opti.set_take_name(client, 'ASSR')
+    opti.start_recording(client)
+else:
+    client = None
 
 #%% Loop
 
@@ -136,21 +147,23 @@ intro_screen.draw()
 window.flip()
 core.wait(intro_dur)
 
-video.play()
-
 # Play the video for a bit before starting the sound
+video.play()
 video_start_timer = core.CountdownTimer(video_dur_at_start)
 while video_start_timer.getTime() > 0:
     video.draw()
     window.flip()
-    if 'escape' in event.getKeys():
+    keys = event.getKeys()
+    if 'escape' in keys:
         print('Experiment aborted by user during sound.')
-        opti.stop_recording(client)
         sd.stop()
-        window.close()
-        core.quit()
+        utils.quit_experiment(window,client)
+    if 'p' in keys:
+        video.pause()
+        utils.pause_experiment(window,client)
+        video.play()
 
-
+# Now start the actual trial loop
 for trial in range(n_trials):
     print(f'Trial: {trial+1}')
        
@@ -158,49 +171,50 @@ for trial in range(n_trials):
         blocksize=blocksize, latency=latency_mode,
         extra_settings=extra_settings) 
     
-    trig_port.setData(PortCodes.tonetrig)
-    core.wait(0.005)
-    trig_port.setData(0)
+    utils.send_trigger(PortCodes.tonetrig)
     
-    # Create trial timer (sound duration)
+    # Play sound
     sound_timer = core.Clock()
     while sound_timer.getTime() < play_duration:
-        # Keep updating the video
-        if not video.isFinished:
-            video.draw()
-            window.flip()
-        else:
-            window.flip()  # Still need to flip to handle keyboard
-        if 'escape' in event.getKeys():
+        video.draw()
+        window.flip()
+        keys = event.getKeys()
+        if 'escape' in keys:
             print('Experiment aborted by user during sound.')
             sd.stop()
-            opti.stop_recording(client)
-            window.close()
-            core.quit()
+            utils.quit_experiment(window,client)
+        if 'p' in keys:
+            video.pause()
+            utils.pause_experiment(window,client)
+            video.play()
     
-    # Wait for tone duration  
+    # ISI  
     sd.wait()
-
     pause_timer = core.CountdownTimer(pause_durations[trial])
     while pause_timer.getTime() > 0:
-        if not video.isFinished:
-            video.draw()
-            window.flip()
-        else:
-            window.flip()
-        if 'escape' in event.getKeys():
+        video.draw()
+        window.flip()
+        keys = event.getKeys()
+        if 'escape' in keys:
             print('Experiment aborted by user during pause.')
             sd.stop()
-            opti.stop_recording(client)
-            window.close()
-            core.quit()
-
-end_screen.draw()
-window.flip()
-core.wait(end_dur)
+            utils.quit_experiment(window,client)
+        if 'p' in keys:
+            video.pause()
+            utils.pause_experiment(window,client)
+            video.play()
+            
+# Fade out
+fade_frames = int(fade_duration * framerate)
+for i in range(fade_frames):
+    # Visual fade: draw video, then overlay a black rect with increasing opacity
+    video.draw()
+    black = visual.Rect(window, width=win_size[0], height=win_size[1], fillColor='black', opacity=i / fade_frames)
+    black.draw()
+    window.flip()
 
 # End of experiment
 print("Experiment complete.")
-opti.stop_recording(client)
-window.close()
-core.quit()
+video.stop()
+video.seek(0)
+utils.quit_experiment(window,client)
