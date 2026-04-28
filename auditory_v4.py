@@ -11,7 +11,7 @@ from psychopy import core, parallel, event, visual
 from enum import IntFlag
 from utils import stim
 import sys
-sys.path.append(r'C:\Experiments\TaylorLab\python_utils') 
+sys.path.append(r'C:\Experiments\TaylorLab\stim_utils') 
 import OptitrackUtils as opti
 import os
 os.chdir(os.path.dirname(os.path.abspath(__file__))) 
