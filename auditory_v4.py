@@ -6,6 +6,7 @@ Created on Wed Jun 25 17:03:18 2025
 
 ASSR paradigm.
 A pingu cartoon is played while the participant listens to an auditory clicktrain.
+For good results, you either need earphones or a very good speaker. 
 
 Before you start, verify what sound drivers you have available:
     import sounddevice as sd
@@ -25,7 +26,7 @@ import sounddevice as sd
 from psychopy import core, event, visual
 from enum import IntFlag
 import sys
-sys.path.append(r'C:\Experiments\TaylorLab\stim_utils') 
+sys.path.append(r'C:\Experiments\TaylorLab\stim_utils') # Change folder name as needed
 import OptitrackUtils as opti
 import ExperimentUtils as utils
 import os
