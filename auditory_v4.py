@@ -77,7 +77,7 @@ pause_duration = 1.75    # in seconds
 max_jitter = 0.25        # in seconds
 n_trials = 80
 frequency = 40           # Hz, number of clicks per second
-fade_duration = 2  # seconds, the duration of fade-out after experiment_duration is exceeded. 
+fade_duration = 4  # seconds, the duration of fade-out after experiment_duration is exceeded. 
 
 #%% Audio setup
 
