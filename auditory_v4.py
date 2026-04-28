@@ -26,15 +26,16 @@ import sounddevice as sd
 from psychopy import core, event, visual
 from enum import IntFlag
 import sys
-sys.path.append(r'C:\Experiments\TaylorLab\stim_utils') # Change folder name as needed
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent
+sys.path.append(str(BASE_DIR.parent / 'stim_utils'))
 import OptitrackUtils as opti
 import ExperimentUtils as utils
-import os
-os.chdir(os.path.dirname(os.path.abspath(__file__))) 
 
 #%% System-dependent parameters
 
-selected_video = 'Pingu_Scooter.mp4' # Make sure the video is in the current folder or specify a file path as needed
+selected_video = BASE_DIR / 'Pingu_Scooter.mp4' # Make sure the video is in the current folder or specify a file path as needed
 
 # Select audio device
 device_index = 7  # Set WASAPI as default driver for low latency. In our setuip, 7 is for MSR speaker and 10 for earphones. 
