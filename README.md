@@ -5,7 +5,7 @@ git clone https://github.com/EvaBro/assr_paradigm
 ```
 
 ### Stimuli
-The cartoon video is available upon request.
+Please contact the author for access to the cartoon video.
 
 ### Dependencies
 This paradigm requires [stim_utils](https://github.com/EvaBro/stim_utils). Clone it as a sibling folder:
