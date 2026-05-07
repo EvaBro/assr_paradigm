@@ -27,11 +27,17 @@ from psychopy import core, event, visual
 from enum import IntFlag
 import sys
 from pathlib import Path
+import psutil
+import os
 
 BASE_DIR = Path(__file__).parent
 sys.path.append(str(BASE_DIR.parent / 'stim_utils'))
 import OptitrackUtils as opti
 import ExperimentUtils as utils
+
+# Give psychopy high scheduling priority
+process = psutil.Process(os.getpid())
+process.nice(psutil.HIGH_PRIORITY_CLASS)
 
 #%% System-dependent parameters
 
@@ -64,7 +70,7 @@ class PortCodes(IntFlag):
     tonetrig = 8    # Trigger for the tone
     
 # Whether or not to use head motion tracking, set to False if you don't have Optitrack
-optitrack = False
+optitrack = True
 
 #%% Experiment parameters
 
