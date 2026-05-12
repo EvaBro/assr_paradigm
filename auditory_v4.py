@@ -100,8 +100,14 @@ with sd.OutputStream(
 jitters = np.random.uniform(-max_jitter, max_jitter, n_trials)
 pause_durations = pause_duration + jitters
         
-
-#%% Video Settings
+#%% Setup hardware, window and jitters
+if optitrack:
+    client = opti.setup()
+    if client is not None:
+        opti.set_take_name(client, 'ASSR')
+        opti.start_recording(client)
+else:
+    client = None
 
 # Create a window
 win_size = utils.get_window_size(screen_idx) 
@@ -140,13 +146,7 @@ def generate_square_wave(frequency, square_duration, play_duration, sample_rate)
 tone_data = generate_square_wave(frequency, square_duration, play_duration, sample_rate)
 tone_data = tone_data.astype(np.float32)
 
-#%% Setup optitrack
-if optitrack:
-    client = opti.setup()
-    opti.set_take_name(client, 'ASSR')
-    opti.start_recording(client)
-else:
-    client = None
+
 
 #%% Loop
 
