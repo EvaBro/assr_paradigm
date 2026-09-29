@@ -103,6 +103,9 @@ fade_duration = 4  # seconds, the duration of fade-out after experiment_duration
 
 #%% Audio setup
 
+# Set master volume to max in case another user changed speaker volume
+utils.set_master_volume(1.0)
+
 # Open an optimized output stream to check latency
 with sd.OutputStream(
     device=device_index, samplerate=sample_rate,
